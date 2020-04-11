@@ -1,0 +1,133 @@
+2018.8.10
+　TensorFlow on Windows10
+　インストールメモ
+
+■参考
+http://suechan.hateblo.jp/entry/2017/12/23/235835
+https://qiita.com/kattoyoshi/items/494238793824f25fa489
+https://qiita.com/tk_01/items/9d3961e386714b67f732
+
+
+■経緯
+
+TensorFlowマシンとして稼働していたUbuntuが、
+OSアプデとともにNVIDIAドライバ周辺で不具合発生。
+死力を尽くすも復旧には至らず。
+仕方なく、かつてTensorFlowインストールを試みるも
+CUDA（最初の最初段階）のインストールで躓き、
+そのまま放置されていたWindowsにて
+再び環境構築に挑むことに。。
+
+
+■環境一覧
+
+・OS：Windows10 64bit Home
+・GPU：GTX 1070ti
+・CUDA：9.0
+・cuDNN：7.0.5
+・Anaconda（Python）：3.6.2（※インストール済とする。割愛）
+・TensorFlow:1.10.0
+・Keras:2.2.2
+
+
+■手順メモ
+
+1.CUDAインストール
+
+CUDAはver9.0を利用。
+　cuda_9.0.176_win10.exe
+
+ウィザードを起動し進めると以下のエラーが出る。
+　This graphics driver could not find compatible graphics hardware.
+You may continue installation. but you may not be able to run CUDA 
+applications with this driver. This may occur with graphics hardware
+that is newer than this toolkit. In that case, it is suggested that
+you keep your existing driver and install the remaining portions of
+the CUDA Toolkit.
+
+が、「Driver Components」をチェック外せばOK.以下参照
+https://qiita.com/kattoyoshi/items/494238793824f25fa489
+
+CUDA 9.1はインストールこそいけるが、
+TensorFlow実行したら
+　ImportError: Could not find 'cudart64_90.dll'. TensorFlow requires that this DLL be installed in a directory that is named in your %PATH% environment variable. Download and install CUDA 9.0 from this URL: https://developer.nvidia.com/cuda-90-download-archive
+
+というエラーで動作しない。
+CUDA 9.1はTensorFlowが動作しないらしい。
+公式は8.0か9.0のみサポート。
+
+
+2.cuDNNのインストール
+
+cuDNN v7.0.5 for CUDA 9.0を利用する。
+　cudnn-9.0-windows10-x64-v7
+
+解凍後、以下ファイルコピー実施
+・cudnn-9.0-windows10-x64-v7\cuda\bin\cudnn64_7.dll → C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.0\bin\
+・cudnn-9.0-windows10-x64-v7\cuda\include\cudnn.h → C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.0\include\
+・cudnn-9.0-windows10-x64-v7\cuda\lib\x64\cudnn.lib → C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.0\lib\x64\
+
+
+3.TensorFlowのインストール
+
+Anaconda Prompt起動。以下の順に実施。
+
+・とりあえず一覧表示
+conda info -e
+
+・Conda仮想環境作成、アクティベート
+conda create -n tfenv python=3.6.2
+activate tfenv
+  (deactivate : ディアクティベート)
+  (conda remove -n tfenv : 削除)
+
+・Jupyter notebook インストール
+pip install jupyter
+
+・GPU版TensorFlow, Keras
+pip install --ignore-installed --upgrade tensorflow-gpu
+（参考　https://www.tensorflow.org/install/install_windows）
+pip install keras
+
+・カーネル追加
+conda install notebook ipykernel
+ipython kernel install --user --name tfenv --display-name TensorFlow 
+
+
+4. 動作確認
+
+・Jupyter notebook起動
+Anaconda Promptからjupyter notebook起動。
+
+以下でエラーでなければOK
+import tensorflow as tf
+hello = tf.constant('Hello, TensorFlow!')
+sess = tf.Session()
+print(sess.run(hello))
+
+
+■Appendix
+
+・tensorflowバージョンチェック
+import tensorflow as tf
+print(tf.__version__)
+
+・Kerasバージョンチェック
+import keras
+print(keras.__version__) 
+
+ちゃんとGPUで動作できているか確認
+http://thr3a.hatenablog.com/entry/20180113/1515820265
+
+from tensorflow.python.client import device_lib
+device_lib.list_local_devices()
+
+
+Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+というワーニング、心配はないらしい？
+
+https://stackoverflow.com/questions/47068709/your-cpu-supports-instructions-that-this-tensorflow-binary-was-not-compiled-to-u
+
+If you have a GPU, you shouldn't care about AVX support, because most expensive ops will be dispatched on a GPU device (unless explicitly set not to). In this case, you can simply ignore this warning by
+
+
